@@ -1,7 +1,7 @@
 import { getRepository, IsNull } from "typeorm";
 import { PlotsBought } from "../model";
 
-export const ROLL_BLOCK_DELAY = 72;
+export const ROLL_BLOCK_DELAY = 7200;
 
 var rollBlocks = new Map<number, Array<string>>();
 var filled = false;
