@@ -1,15 +1,15 @@
-import {
-  EvmLogHandlerContext,
-  SubstrateEvmProcessor,
-} from "@subsquid/substrate-evm-processor";
+import { SubstrateEvmProcessor } from "@subsquid/substrate-evm-processor";
 import { lookupArchive } from "@subsquid/archive-registry";
-import { CHAIN_NODE, contract, createContractEntity, getContractEntity } from "./contract";
-import * as erc721 from "./abi/erc721";
-import { Owner, Token, Transfer } from "./model";
+import { CHAIN_NODE, contract } from "./utils/land-market-contract";
+import * as landMarket from "./types/landMarket";
+import * as rolls from "./utils/rolls-map";
+import { PlotsBought } from "./model";
+import { calcucateSeed } from "./utils/seed-calculator";
 
 const processor = new SubstrateEvmProcessor("moonriver-substrate");
 
 processor.setBatchSize(500);
+processor.setBlockRange({ from: 2039880 });
 
 processor.setDataSource({
   chain: CHAIN_NODE,
@@ -18,61 +18,61 @@ processor.setDataSource({
 
 processor.setTypesBundle("moonbeam");
 
-processor.addPreHook({ range: { from: 0, to: 0 } }, async (ctx) => {
-  await ctx.store.save(createContractEntity());
-});
-
 processor.addEvmLogHandler(
   contract.address,
   {
-    filter: [erc721.events["Transfer(address,address,uint256)"].topic],
+    filter: [
+      landMarket.events["PlotsBought(uint256[],address,address,bool)"].topic,
+    ],
   },
-  contractLogsHandler
+  async (ctx) => {
+    const { substrate, store, txHash } = ctx;
+    const event =
+      landMarket.events["PlotsBought(uint256[],address,address,bool)"].decode(
+        ctx
+      );
+    const plotIds = event.plotIds.map((id) => id.toNumber());
+    const rollBlock = substrate.block.height + rolls.ROLL_BLOCK_DELAY;
+    const boughtEvent = new PlotsBought({
+      id: substrate.event.id,
+      plotIds: plotIds,
+      buyer: event.buyer,
+      referrer: event.referrer,
+      boughtWithCredits: event.boughtWithCredits,
+      txnHash: txHash,
+      createdAt: new Date(substrate.block.timestamp),
+      blockNumber: substrate.block.height,
+      blockHash: substrate.block.hash,
+      rollBlockNumber: rollBlock,
+    });
+    rolls.setRollId(rollBlock, boughtEvent.id);
+    await store.save(boughtEvent);
+  }
 );
 
-export async function contractLogsHandler(
-  ctx: EvmLogHandlerContext
-): Promise<void> {
-  const transfer =
-    erc721.events["Transfer(address,address,uint256)"].decode(ctx);
-
-  let from = await ctx.store.get(Owner, transfer.from);
-  if (from == null) {
-    from = new Owner({ id: transfer.from, balance: 0n });
-    await ctx.store.save(from);
+processor.addPreHook(async (ctx) => {
+  const { block, store } = ctx;
+  if (rolls.isQueueEmpty()) {
+    rolls.fillRollBlocks();
   }
-
-  let to = await ctx.store.get(Owner, transfer.to);
-  if (to == null) {
-    to = new Owner({ id: transfer.to, balance: 0n });
-    await ctx.store.save(to);
+  const rollIds = rolls.getRollIds(block.height);
+  if (rollIds) {
+    let currentSeed: string | undefined;
+    const events = await Promise.all(
+      rollIds.map(async (rollId) => {
+        const boughtEvent = await store.get(PlotsBought, rollId);
+        if (boughtEvent) {
+          boughtEvent.rollBlockHash = block.hash
+          if (!currentSeed)
+            currentSeed = calcucateSeed(boughtEvent.blockHash,boughtEvent.rollBlockHash)
+          boughtEvent.seed = currentSeed
+          return boughtEvent;
+        } else 
+          throw new Error(`Not found event - ${rollId}`);
+      })
+    );
+    store.save(events);
   }
-
-  let token = await ctx.store.get(Token, transfer.tokenId.toString());
-  if (token == null) {
-    token = new Token({
-      id: transfer.tokenId.toString(),
-      uri: await contract.tokenURI(transfer.tokenId),
-      contract: await getContractEntity(ctx),
-      owner: to,
-    });
-    await ctx.store.save(token);
-  } else {
-    token.owner = to;
-    await ctx.store.save(token);
-  }
-
-  await ctx.store.save(
-    new Transfer({
-      id: ctx.txHash,
-      token,
-      from,
-      to,
-      timestamp: BigInt(ctx.substrate.block.timestamp),
-      block: ctx.substrate.block.height,
-      transactionHash: ctx.txHash,
-    })
-  );
-}
+});
 
 processor.run();
