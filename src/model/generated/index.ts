@@ -1,1 +1,1 @@
-export * from "./plotsBought.model"
+export * from "./plotBought.model"

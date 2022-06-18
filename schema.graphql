@@ -1,6 +1,6 @@
-type PlotsBought @entity {
+type PlotBought @entity {
   id: ID!
-  plotIds: [Int!]
+  plotId: Int! @index
   buyer: String! @index
   referrer: String! 
   boughtWithCredits: Boolean!
@@ -11,4 +11,5 @@ type PlotsBought @entity {
   rollBlockNumber: Int!
   rollBlockHash: String @index
   seed: String
+  roll: Float @index
 }
