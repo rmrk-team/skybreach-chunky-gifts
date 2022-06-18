@@ -1,7 +1,7 @@
 import { getRepository, IsNull } from "typeorm"
 import { PlotBought } from "../model"
 
-export const ROLL_BLOCK_DELAY = 72;
+export const ROLL_BLOCK_DELAY = 7200;
 
 export var rollBlocks = new Set<number> 
 var filled = false
