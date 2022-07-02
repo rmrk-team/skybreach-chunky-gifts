@@ -1,15 +1,22 @@
 type PlotBought @entity {
   id: ID!
-  plotId: Int! @index
+  plot: Plot!
   buyer: String! @index
   referrer: String! 
   boughtWithCredits: Boolean!
   txnHash: String! @index
   createdAt: DateTime! @index
-  blockNumber: Int! @index
-  blockHash: String! 
+  blockNumber: Int! 
+}
+
+type Plot @entity {
+  id: ID!
+  owner: String! @index
+  sales: [PlotBought!]  @derivedFrom(field: "plot")
+  firstblockNumber: Int! @index
+  firstblockHash: String! 
   rollBlockNumber: Int!
-  rollBlockHash: String @index
+  rollBlockHash: String
   seed: String
   roll: Float @index
 }

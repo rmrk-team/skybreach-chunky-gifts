@@ -1,4 +1,5 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_} from "typeorm"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
+import {Plot} from "./plot.model"
 
 @Entity_()
 export class PlotBought {
@@ -10,8 +11,8 @@ export class PlotBought {
   id!: string
 
   @Index_()
-  @Column_("int4", {nullable: false})
-  plotId!: number
+  @ManyToOne_(() => Plot, {nullable: false})
+  plot!: Plot
 
   @Index_()
   @Column_("text", {nullable: false})
@@ -31,24 +32,6 @@ export class PlotBought {
   @Column_("timestamp with time zone", {nullable: false})
   createdAt!: Date
 
-  @Index_()
   @Column_("int4", {nullable: false})
   blockNumber!: number
-
-  @Column_("text", {nullable: false})
-  blockHash!: string
-
-  @Column_("int4", {nullable: false})
-  rollBlockNumber!: number
-
-  @Index_()
-  @Column_("text", {nullable: true})
-  rollBlockHash!: string | undefined | null
-
-  @Column_("text", {nullable: true})
-  seed!: string | undefined | null
-
-  @Index_()
-  @Column_("numeric", {nullable: true})
-  roll!: number | undefined | null
 }
