@@ -119,10 +119,29 @@ export const handlePrimarySaleEvents: Handler<'primarySale'> = async (
   handlerContext,
   primarySalesEvent,
 ) => {
-  const { emContext, originalEvent } = handlerContext;
+  const { emContext, originalEvent, ctx } = handlerContext;
 
   const { boughtWithCredits, buyer, referrer, plotIds } = primarySalesEvent;
   for (const plotId of plotIds) {
+    if (rolls.isQueueEmpty()) {
+      rolls.fillRollBlocks(ctx.store);
+    }
+    if (rolls.rollBlocks.has(originalEvent.blockNumber)) {
+      const plots = await ctx.store.find(Plot, {
+        where: {
+          rollBlockNumber: originalEvent.blockNumber,
+        },
+      });
+      plots.forEach((plot) => {
+        plot.rollBlockHash = originalEvent.hash;
+        const seed = calcucateSeed(plot.firstblockHash, plot.rollBlockHash, Number(plot.id));
+        plot.seed = '0x' + seed.toString(16);
+        plot.roll = mulberry32(seed)();
+      });
+      await ctx.store.save(plots);
+      rolls.rollBlocks.delete(originalEvent.blockNumber);
+    }
+
     const rollBlock = originalEvent.blockNumber + rolls.ROLL_BLOCK_DELAY;
     rolls.rollBlocks.add(rollBlock);
     const plot = await emContext.plots.getOrCreate(
@@ -189,25 +208,6 @@ async function processBatches(ctx: Context) {
 
   // Let's batch events we are interested in
   for (const block of ctx.blocks) {
-    if (rolls.isQueueEmpty()) {
-      await rolls.fillRollBlocks(ctx.store);
-    }
-    if (rolls.rollBlocks.has(block.header.height)) {
-      const plots = await ctx.store.find(Plot, {
-        where: {
-          rollBlockNumber: block.header.height,
-        },
-      });
-      plots.forEach((plot) => {
-        plot.rollBlockHash = block.header.hash;
-        const seed = calcucateSeed(plot.firstblockHash, block.header.hash, Number(plot.id));
-        plot.seed = '0x' + seed.toString(16);
-        plot.roll = mulberry32(seed)();
-      });
-      await ctx.store.save(plots);
-      rolls.rollBlocks.delete(block.header.height);
-    }
-
     for (const item of block.items) {
       if (item.name === 'EVM.Log') {
         const topic = getTopic(item.event);

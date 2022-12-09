@@ -4,8 +4,8 @@ import { Store } from '@subsquid/typeorm-store';
 
 export const ROLL_BLOCK_DELAY = 7200;
 
-export var rollBlocks = new Set<number>();
-var filled = false;
+export const rollBlocks = new Set<number>();
+let filled = false;
 
 export async function fillRollBlocks(store: Store) {
   const nonFinalized = await store.find(Plot, {
