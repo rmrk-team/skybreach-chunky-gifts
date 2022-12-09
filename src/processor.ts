@@ -189,6 +189,25 @@ async function processBatches(ctx: Context) {
 
   // Let's batch events we are interested in
   for (const block of ctx.blocks) {
+    if (rolls.isQueueEmpty()) {
+      await rolls.fillRollBlocks(ctx.store);
+    }
+    if (rolls.rollBlocks.has(block.header.height)) {
+      const plots = await ctx.store.find(Plot, {
+        where: {
+          rollBlockNumber: block.header.height,
+        },
+      });
+      plots.forEach((plot) => {
+        plot.rollBlockHash = block.header.hash;
+        const seed = calcucateSeed(plot.firstblockHash, block.header.hash, Number(plot.id));
+        plot.seed = '0x' + seed.toString(16);
+        plot.roll = mulberry32(seed)();
+      });
+      await ctx.store.save(plots);
+      rolls.rollBlocks.delete(block.header.height);
+    }
+
     for (const item of block.items) {
       if (item.name === 'EVM.Log') {
         const topic = getTopic(item.event);
@@ -241,25 +260,6 @@ async function preparePrefetchItems(
   for (const landSaleEvent of landSaleEvents) {
     const topic = getTopic(landSaleEvent);
     const eventHandler = getEventProcessor(ctx, topic);
-
-    if (rolls.isQueueEmpty()) {
-      await rolls.fillRollBlocks(ctx.store);
-    }
-    if (rolls.rollBlocks.has(landSaleEvent.blockNumber)) {
-      const plots = await ctx.store.find(Plot, {
-        where: {
-          rollBlockNumber: landSaleEvent.blockNumber,
-        },
-      });
-      plots.forEach((plot) => {
-        plot.rollBlockHash = landSaleEvent.hash;
-        const seed = calcucateSeed(plot.firstblockHash, plot.rollBlockHash, Number(plot.id));
-        plot.seed = '0x' + seed.toString(16);
-        plot.roll = mulberry32(seed)();
-      });
-      await ctx.store.save(plots);
-      rolls.rollBlocks.delete(landSaleEvent.blockNumber);
-    }
 
     if (eventHandler) {
       const { decode, preparePrefetch } = eventHandler;
