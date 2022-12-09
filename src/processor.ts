@@ -41,7 +41,8 @@ const processor = new SubstrateBatchProcessor()
   })
   .addEvmLog(config.CONTRACT_ADDRESS, {
     filter: [Object.values(LAND_SALE_EVENTS).map((event) => event.topic)],
-  });
+  })
+  .addEvent('*');
 
 type Item = BatchProcessorItem<typeof processor>;
 export type Context = BatchContext<Store, Item>;
@@ -123,20 +124,6 @@ export const handlePrimarySaleEvents: Handler<'primarySale'> = async (
 
   const { boughtWithCredits, buyer, referrer, plotIds } = primarySalesEvent;
   for (const plotId of plotIds) {
-    const plotsEm = emContext.plots.entitiesMap.values()
-
-    const plots = await ctx.store.find(Plot, {
-      where: {
-        rollBlockNumber: originalEvent.blockNumber,
-      },
-    });
-    [...plots, ...[...plotsEm].filter(plot => plot.rollBlockNumber === originalEvent.blockNumber)].forEach((plot) => {
-      plot.rollBlockHash = originalEvent.hash;
-      const seed = calcucateSeed(plot.firstblockHash, plot.rollBlockHash, Number(plot.id));
-      plot.seed = '0x' + seed.toString(16);
-      plot.roll = mulberry32(seed)();
-    });
-    await ctx.store.save(plots);
     const rollBlock = originalEvent.blockNumber + rolls.ROLL_BLOCK_DELAY;
     const plot = await emContext.plots.getOrCreate(
       plotId.toString(),
@@ -202,6 +189,24 @@ async function processBatches(ctx: Context) {
 
   // Let's batch events we are interested in
   for (const block of ctx.blocks) {
+    const plotsEm = emCtx.plots.entitiesMap.values();
+
+    const plots = await ctx.store.find(Plot, {
+      where: {
+        rollBlockNumber: block.header.height,
+      },
+    });
+    [
+      ...plots,
+      ...[...plotsEm].filter((plot) => plot.rollBlockNumber === block.header.height),
+    ].forEach((plot) => {
+      plot.rollBlockHash = block.header.hash;
+      const seed = calcucateSeed(plot.firstblockHash, plot.rollBlockHash, Number(plot.id));
+      plot.seed = '0x' + seed.toString(16);
+      plot.roll = mulberry32(seed)();
+    });
+    await ctx.store.save(plots);
+
     for (const item of block.items) {
       if (item.name === 'EVM.Log') {
         const topic = getTopic(item.event);
