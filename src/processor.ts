@@ -14,6 +14,7 @@ import { config } from './contract';
 import { Store, TypeormDatabase } from '@subsquid/typeorm-store';
 import { EntitiesManager } from './utils/EntittyManager';
 import { AddressZero } from '@ethersproject/constants';
+import {isFilling} from "./utils/rolls-queue";
 
 export interface EvmEvent {
   data: string;
@@ -123,8 +124,10 @@ export const handlePrimarySaleEvents: Handler<'primarySale'> = async (
 
   const { boughtWithCredits, buyer, referrer, plotIds } = primarySalesEvent;
   for (const plotId of plotIds) {
-    if (rolls.isQueueEmpty()) {
-      rolls.fillRollBlocks(ctx.store);
+    const plotsEm = emContext.plots.entitiesMap.values()
+
+    if (!rolls.isFilling()) {
+      rolls.fillRollBlocks(ctx.store, plotsEm);
     }
     if (rolls.rollBlocks.has(originalEvent.blockNumber)) {
       const plots = await ctx.store.find(Plot, {
@@ -132,7 +135,7 @@ export const handlePrimarySaleEvents: Handler<'primarySale'> = async (
           rollBlockNumber: originalEvent.blockNumber,
         },
       });
-      plots.forEach((plot) => {
+      [...plots, ...plotsEm].forEach((plot) => {
         plot.rollBlockHash = originalEvent.hash;
         const seed = calcucateSeed(plot.firstblockHash, plot.rollBlockHash, Number(plot.id));
         plot.seed = '0x' + seed.toString(16);

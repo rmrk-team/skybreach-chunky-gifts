@@ -5,21 +5,27 @@ import { Store } from '@subsquid/typeorm-store';
 export const ROLL_BLOCK_DELAY = 7200;
 
 export const rollBlocks = new Set<number>();
-let filled = false;
+let filling = false;
 
-export async function fillRollBlocks(store: Store) {
+export async function fillRollBlocks(store: Store, plotsEm: IterableIterator<Plot>) {
+  filling = true;
   const nonFinalized = await store.find(Plot, {
     where: {
       rollBlockHash: IsNull(),
     },
   });
-  if (nonFinalized) {
-    nonFinalized.forEach((plot) => {
+  const nonFinalizedPlots = [
+    ...nonFinalized,
+    ...[...plotsEm].filter((plot) => !plot.rollBlockHash),
+  ];
+  if (nonFinalizedPlots) {
+    nonFinalizedPlots.forEach((plot) => {
       rollBlocks.add(plot.rollBlockNumber);
     });
-    filled = true;
-    console.log(`Found ${nonFinalized.length} unrolled plots`);
+    console.log(`Found ${nonFinalizedPlots.length} unrolled plots`);
   }
+
+  filling = false;
 }
 
-export const isQueueEmpty = () => !filled;
+export const isFilling = () => filling;
