@@ -8,24 +8,26 @@ export const rollBlocks = new Set<number>();
 let filling = false;
 
 export async function fillRollBlocks(store: Store, plotsEm: IterableIterator<Plot>) {
-  filling = true;
-  const nonFinalized = await store.find(Plot, {
-    where: {
-      rollBlockHash: IsNull(),
-    },
-  });
-  const nonFinalizedPlots = [
-    ...nonFinalized,
-    ...[...plotsEm].filter((plot) => !plot.rollBlockHash),
-  ];
-  if (nonFinalizedPlots) {
-    nonFinalizedPlots.forEach((plot) => {
-      rollBlocks.add(plot.rollBlockNumber);
+  if (!filling) {
+    filling = true;
+    const nonFinalized = await store.find(Plot, {
+      where: {
+        rollBlockHash: IsNull(),
+      },
     });
-    console.log(`Found ${nonFinalizedPlots.length} unrolled plots`);
-  }
+    const nonFinalizedPlots = [
+      ...nonFinalized,
+      ...[...plotsEm].filter((plot) => !plot.rollBlockHash),
+    ];
+    if (nonFinalizedPlots) {
+      nonFinalizedPlots.forEach((plot) => {
+        rollBlocks.add(plot.rollBlockNumber);
+      });
+      console.log(`Found ${nonFinalizedPlots.length} unrolled plots`);
+    }
 
-  filling = false;
+    filling = false;
+  }
 }
 
 export const isFilling = () => filling;

@@ -14,7 +14,6 @@ import { config } from './contract';
 import { Store, TypeormDatabase } from '@subsquid/typeorm-store';
 import { EntitiesManager } from './utils/EntittyManager';
 import { AddressZero } from '@ethersproject/constants';
-import {isFilling} from "./utils/rolls-queue";
 
 export interface EvmEvent {
   data: string;
