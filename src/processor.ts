@@ -125,27 +125,19 @@ export const handlePrimarySaleEvents: Handler<'primarySale'> = async (
   for (const plotId of plotIds) {
     const plotsEm = emContext.plots.entitiesMap.values()
 
-    if (!rolls.isFilling()) {
-      rolls.fillRollBlocks(ctx.store, plotsEm);
-    }
-    if (rolls.rollBlocks.has(originalEvent.blockNumber)) {
-      const plots = await ctx.store.find(Plot, {
-        where: {
-          rollBlockNumber: originalEvent.blockNumber,
-        },
-      });
-      [...plots, ...plotsEm].forEach((plot) => {
-        plot.rollBlockHash = originalEvent.hash;
-        const seed = calcucateSeed(plot.firstblockHash, plot.rollBlockHash, Number(plot.id));
-        plot.seed = '0x' + seed.toString(16);
-        plot.roll = mulberry32(seed)();
-      });
-      await ctx.store.save(plots);
-      rolls.rollBlocks.delete(originalEvent.blockNumber);
-    }
-
+    const plots = await ctx.store.find(Plot, {
+      where: {
+        rollBlockNumber: originalEvent.blockNumber,
+      },
+    });
+    [...plots, ...[...plotsEm].filter(plot => plot.rollBlockNumber === originalEvent.blockNumber)].forEach((plot) => {
+      plot.rollBlockHash = originalEvent.hash;
+      const seed = calcucateSeed(plot.firstblockHash, plot.rollBlockHash, Number(plot.id));
+      plot.seed = '0x' + seed.toString(16);
+      plot.roll = mulberry32(seed)();
+    });
+    await ctx.store.save(plots);
     const rollBlock = originalEvent.blockNumber + rolls.ROLL_BLOCK_DELAY;
-    rolls.rollBlocks.add(rollBlock);
     const plot = await emContext.plots.getOrCreate(
       plotId.toString(),
       () =>
