@@ -1,7 +1,7 @@
 import { ethers } from "ethers"
-import * as landMarket from "../types/landMarket"
+import * as landMarket from "../abi/landSales"
 
- 
+
 export const CHAIN_NODE = "wss://wss.api.moonriver.moonbeam.network"
 
 export const contract = new ethers.Contract(
@@ -9,5 +9,5 @@ export const contract = new ethers.Contract(
   landMarket.abi,
   new ethers.providers.WebSocketProvider(CHAIN_NODE)
 );
- 
- 
+
+
