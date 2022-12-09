@@ -24,4 +24,4 @@ jobs:
     with:
       network: moonriver
       squid-name: skybreach-chunky-gifts
-      squid-version: v1
+      squid-version: v0
