@@ -7,11 +7,19 @@ on:
       - master
 
 jobs:
+#  release-moonbase:
+#    secrets:
+#      SQUID_API_KEY: ${{ secrets.SQUID_API_KEY }}
+#    uses: rmrk-team/skybreach-chunky-gifts/.github/workflows/release-env.yaml@master
+#    with:
+#      network: moonbase
+#      squid-name: skybreach-chunky-gifts-dev
+#      squid-version: v0
   release-moonriver:
     secrets:
       SQUID_API_KEY: ${{ secrets.SQUID_API_KEY }}
-    needs:
-      - release-moonbase
+#    needs:
+#      - release-moonbase
     uses: rmrk-team/skybreach-chunky-gifts/.github/workflows/release-env.yaml@master
     with:
       network: moonriver
