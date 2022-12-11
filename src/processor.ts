@@ -140,6 +140,7 @@ export const handlePrimarySaleEvents: Handler<'primarySale'> = async (
     plot.owner = buyer;
 
     const plotIdStr = plotId.toString();
+    emContext.plots.add(plot);
     emContext.landSales.add(
       new PlotBought({
         id: `${plotIdStr}-${originalEvent.evmTxHash}`,
