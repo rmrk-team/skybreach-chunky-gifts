@@ -7,14 +7,15 @@
     "processor:start": "node lib/processor.js",
     "query-node:start": "squid-graphql-server",
     "lint": "npm run lint:prod -- --fix",
-    "lint:prod": "eslint . --ext .ts --ignore-path .gitignore --max-warnings 0"
+    "lint:prod": "eslint . --ext .ts --ignore-path .gitignore --max-warnings 0",
+    "update": "npx npm-check-updates --filter /subsquid/ --upgrade && npm i -f"
   },
   "dependencies": {
     "@ethersproject/abi": "^5.6.3",
-    "@subsquid/archive-registry": "^1.0.17",
-    "@subsquid/cli": "^0.7.4",
+    "@subsquid/archive-registry": "^1.0.18",
+    "@subsquid/cli": "^2.0.1",
     "@subsquid/evm-typegen": "^2.0.2",
-    "@subsquid/graphql-server": "^3.2.4",
+    "@subsquid/graphql-server": "^3.3.0",
     "@subsquid/ss58": "^0.1.2",
     "@subsquid/substrate-evm-processor": "^0.0.6",
     "@subsquid/substrate-processor": "^2.1.0",
